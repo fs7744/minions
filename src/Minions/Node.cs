@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace Minions
+﻿namespace Minions
 {
     public class Node<V>
     {
