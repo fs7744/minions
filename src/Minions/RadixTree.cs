@@ -45,6 +45,7 @@
                             var commonNode = new Node<V>() { Term = key[..common], Childrens = new List<Node<V>>() };
                             commonNode.Childrens.Add(new Node<V>() { Term = child.Term[common..], Childrens = child.Childrens, Value = child.Value });
                             commonNode.Childrens.Add(new Node<V>() { Term = term[common..], Value = value });
+                            commonNode.Childrens = commonNode.Childrens.OrderByDescending(i => i.Term).ToList();
                             node.Childrens[j] = commonNode;
                         }
                         //if oldkey shorter (==common), then recursive addTerm (clause1)
@@ -62,14 +63,15 @@
                             var commonNode = new Node<V>() { Term = key[..common], Childrens = new List<Node<V>>() };
                             commonNode.Childrens.Add(new Node<V>() { Term = child.Term[common..], Childrens = child.Childrens, Value = child.Value });
                             commonNode.Childrens.Add(new Node<V>() { Term = term[common..], Value = value });
+                            commonNode.Childrens = commonNode.Childrens.OrderByDescending(i => i.Term).ToList();
                             node.Childrens[j] = commonNode;
                         }
                         return;
                     }
                 }
 
-
                 node.Childrens.Add(new Node<V>() { Term = term, Value = value });
+                node.Childrens = node.Childrens.OrderByDescending(i => i.Term).ToList();
             }
         }
 
@@ -85,7 +87,7 @@
             Node<V>? n = null;
             foreach (var item in curr.Childrens)
             {
-                if (item.Term.Length <= value.Length) 
+                if (item.Term.Length <= value.Length)
                 {
                     var commonKey = value[..item.Term.Length];
                     if (commonKey == item.Term)
