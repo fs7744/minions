@@ -1,4 +1,6 @@
-﻿namespace Minions
+﻿using System.Collections.Generic;
+
+namespace Minions
 {
     public class RadixTree<V>
     {
@@ -35,6 +37,7 @@
                     {
                         if (common == term.Length && common == key.Length) // same
                         {
+                            child.Value ??= value;
                         }
                         //new is subkey
                         //existing abcd
@@ -44,8 +47,9 @@
                         {
                             var commonNode = new Node<V>() { Term = key[..common], Childrens = new List<Node<V>>() };
                             commonNode.Childrens.Add(new Node<V>() { Term = child.Term[common..], Childrens = child.Childrens, Value = child.Value });
-                            commonNode.Childrens.Add(new Node<V>() { Term = term[common..], Value = value });
+                            commonNode.Value = value;
                             commonNode.Childrens = commonNode.Childrens.OrderByDescending(i => i.Term).ToList();
+                            //commonNode.Childrens = commonNode.Childrens.OrderBy(i => i.Term).ToList();
                             node.Childrens[j] = commonNode;
                         }
                         //if oldkey shorter (==common), then recursive addTerm (clause1)
@@ -64,6 +68,7 @@
                             commonNode.Childrens.Add(new Node<V>() { Term = child.Term[common..], Childrens = child.Childrens, Value = child.Value });
                             commonNode.Childrens.Add(new Node<V>() { Term = term[common..], Value = value });
                             commonNode.Childrens = commonNode.Childrens.OrderByDescending(i => i.Term).ToList();
+                            //commonNode.Childrens = commonNode.Childrens.OrderBy(i => i.Term).ToList();
                             node.Childrens[j] = commonNode;
                         }
                         return;
@@ -72,6 +77,7 @@
 
                 node.Childrens.Add(new Node<V>() { Term = term, Value = value });
                 node.Childrens = node.Childrens.OrderByDescending(i => i.Term).ToList();
+                //node.Childrens = node.Childrens.OrderBy(i => i.Term).ToList();
             }
         }
 
@@ -79,24 +85,45 @@
         {
             ArgumentNullException.ThrowIfNull(find, nameof(find));
             ArgumentNullException.ThrowIfNull(value, nameof(value));
-            return Search(root, value, find, context);
+            return Search(root, new Node<V>() { Term = value }, find, context);
         }
 
-        private Node<V>? Search(Node<V> curr, string value, Func<V, object, bool> find, object context)
+        private static BinarySearchComparer binarySearchComparer = new BinarySearchComparer();
+        private class BinarySearchComparer : IComparer<Node<V>>
         {
-            Node<V>? n = null;
-            foreach (var item in curr.Childrens)
+            public int Compare(Node<V>? x, Node<V>? y)
             {
-                if (item.Term.Length <= value.Length)
-                {
-                    var commonKey = value[..item.Term.Length];
-                    if (commonKey == item.Term)
-                    {
-                        n = item;
-                        break;
-                    }
-                }
+                //return Comparer<string>.Default.Compare(x.Term[..y.Term.Length], y.Term);
+                return Comparer<string>.Default.Compare(x.Term, y.Term[..x.Term.Length]);
             }
+        }
+
+        private Node<V>? Search(Node<V> curr, Node<V> value, Func<V, object, bool> find, object context)
+        {
+            Node<V>? n = curr;
+            //bool hasFirst = false;
+            //if (curr.Childrens[0].Term == "") 
+            //{
+            //    n = curr.Childrens[0];
+            //    hasFirst = true;
+            //}
+            //var index = hasFirst ? curr.Childrens.BinarySearch(1 , curr.Childrens.Count - 1, value, binarySearchComparer) : curr.Childrens.BinarySearch(value, binarySearchComparer);
+            //if (index >= 0) { n = curr.Childrens[index]; }
+            var index = curr.Childrens.BinarySearch(value, binarySearchComparer);
+            if (index >= 0) { n = curr.Childrens[index]; }
+
+            //foreach (var item in curr.Childrens)
+            //{
+            //    if (item.Term.Length <= value.Length)
+            //    {
+            //        var commonKey = value[..item.Term.Length];
+            //        if (commonKey == item.Term)
+            //        {
+            //            n = item;
+            //            break;
+            //        }
+            //    }
+            //}
             if (n == null)
             {
                 return null;
@@ -107,7 +134,15 @@
             }
             else
             {
-                return Search(n, value[n.Term.Length..], find, context);
+                value.Term = value.Term[n.Term.Length..];
+                if (value.Term.Length == 0)
+                {
+                    return n.Value != null && find(n.Value, context) ? n : null;
+                }
+                else
+                {
+                    return Search(n, value, find, context);
+                }
             }
         }
     }
